@@ -1,0 +1,28 @@
+# Folders
+CSCI5465_Project/
+input/
+metadata/
+output/
+Other/
+
+# Files
+.DS_Store
+code/.DS_Store
+code/.Rhistory
+code/.ipynb_checkpoints/CircadianPromoter2kb-checkpoint.ipynb
+code/.ipynb_checkpoints/FilteringFeatures-checkpoint.ipynb
+code/.ipynb_checkpoints/GeneFeatures_v01-checkpoint.ipynb
+code/.ipynb_checkpoints/GenePromoter-checkpoint.ipynb
+code/CircadianPromoter2kb.ipynb
+code/Filter_CosSim.sbatch
+code/Filter_CosSim.sbatch.txt
+code/Filter_PCA10_top10.sbatch
+code/Filter_PCA10_top10.sbatch.txt
+code/FilteringFeatures.ipynb
+code/GeneFeatures_v01.ipynb
+code/ML_models.py
+code/ML_models.sbatch
+code/RandomForest.py
+code/RandomForest.sbatch 
+code/filter_dense_PCA.py
+code/filter_dense_cossim.py
