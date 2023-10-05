@@ -113,17 +113,17 @@ This file describes the scripts used as of summer of 2023. The scripts were init
     - Create dataframe with gene ID and promoter sequence \
     - Match dataframe with gene ID from MetaCycle \
     - Finish looping through all genotypes\
-    - Read in Metacycle output\
-    - Rename genes and merge with promoter sequence\
-    - Save combined output as ../output/circANDnoncirc_Regions_2kb.cs\
-**Output:**\
-    - ../output/circANDnoncirc_Regions_2kb.csv\
-**NOTE:** This code was used once and it's no longer needed, unless we need regions from new genotypes.\
+    - Read in Metacycle output \
+    - Rename genes and merge with promoter sequence \
+    - Save combined output as ../output/circANDnoncirc_Regions_2kb.csv \
+**Output:** \
+    - ../output/circANDnoncirc_Regions_2kb.csv \
+**NOTE:** This code was used once and it's no longer needed, unless we need regions from new genotypes. \
 
 
 
 
-**NOTE: Correct genotype names for:**\
-- WO38: capital W, capital O, three, eight\
-- O302V: capital O, three, zero, 2, capital V\
-- Pcglu: capital P, lowercase c, lowercase g, lowercase l, lowercase u.\
+**NOTE: Correct genotype names for:** \
+- WO38: capital W, capital O, three, eight \
+- O302V: capital O, three, zero, 2, capital V \
+- Pcglu: capital P, lowercase c, lowercase g, lowercase l, lowercase u. \
