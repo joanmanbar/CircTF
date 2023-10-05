@@ -21,86 +21,94 @@ library(ggplot2)
 
 
 
+# *****************************************************
+# Custom functions ----
+# *****************************************************
+
+# Function to clean TPM and add missing time points and reps
+TPM_clean <- function(TPM_file){
+
+    TPM <- as.data.frame(TPM_file) # Convert txt count to df
+    cols_to_keep <- grep("WTP", colnames(TPM)) # Select only WTP
+    TPM <- TPM[, c(1,cols_to_keep)] # Subset but keep the first column
+    # cols_to_keep <- grepl("L58|WO83|A03|VT123|Pcglu|O302V|R500", names(TPM)) # Keep 7 genoypes
+    # TPM <- TPM[, c(1,cols_to_keep)] # Subset
+    cols_to_remove <- grepl("WTP8|_T1", names(TPM)) # Remove WTP8 and _T1 
+    TPM <- TPM[, !cols_to_remove] # subset again
+    ## Design ----
+    # Get info from sample ID
+    IDs <- data.frame(names(TPM)[-1])
+    names(IDs) <- "ID"
+    split_ID <- separate(IDs, col = ID, 
+                        into = c("Genotype", "WTP", "Rep"), sep = "_")
+    IDs <- cbind(IDs, split_ID)
+
+    ## Missing samples ----
+    genotypes <- sort(unique(IDs$Genotype)) # Unique genotypes
+    time_points <- c("WTP1","WTP2","WTP3","WTP4","WTP5","WTP6","WTP7") # Unique time points
+    reps <- c("R1","R2","R3","R4") # Unique reps
+    # time_points <- sort(unique(IDs$WTP)) # Unique time points
+    # reps <- sort(unique(IDs$Rep)) # Unique reps
+    n_genotypes <- length(genotypes) # total genotypes
+    n_reps <- length(reps) # total time points
+    n_tp <- length(time_points) # total reps
+    genotypes <- unlist(c(lapply(genotypes, rep, times = n_reps*n_tp))) # all genotypes
+    time_points <- unlist(c(lapply(time_points, rep, times = n_reps))) # tps by reps
+    time_points <- rep(time_points, n_genotypes) # all time points
+    reps <- rep(reps, n_tp*n_genotypes) # all reps
+    # Get all combinations in order
+    all_samples <- unlist(Map(paste, genotypes, time_points, reps, sep = "_"))
+    all_samples <- unname(all_samples)
+    # identify missing samples
+    missing_samples <- setdiff(all_samples, names(TPM)) #Difference
+    # Create a new data frame with NAs for missing samples
+    NA_df <- data.frame(matrix(NA, nrow = nrow(TPM), ncol = length(missing_samples)))
+    colnames(NA_df) <- missing_samples # Add colnames
+    # Combine original and Na dfs
+    complete_samples <- cbind(TPM, NA_df)
+    complete_samples <- complete_samples[c("Geneid",all_samples)] # order the columns
+
+    # Remove the substring "A03" from all column names
+    names(complete_samples) <- gsub(paste0(genotypes[1],"_"), "", names(complete_samples))
+    complete_samples$Genotype <- genotypes[1] # Add genotype column
+
+    return(complete_samples)
+
+}
+
+
+
+
+
+
+
 
 # *****************************************************
 # Files ----
 # *****************************************************
-
-## Match  ----
-# Match sample id with library id (key)
 
 # Read the libraries key file
 Key <- fread('../input/LIBRARIES_KEY.txt', sep="\t", header = F) # key file
 Key_headers <- c('libraryName','SampleId','rawReads','filteredReads','sampleName','conditionNumber','groupName','sequencerType','runType','fileUsed')
 colnames(Key) <- Key_headers  # Add proper headers
 
-# TPM_counts <- fread('../input/tpm_counts.txt') # counts
-
-# List all the files in count files
+# List all the TPM files
 TPM_files <- list.files(path = '../input/TPM_counts', 
                     pattern = '.txt', 
                     recursive = TRUE, 
                     full.names = TRUE)
 
-# Read counts
-TPM_counts <- TPM_files[1] # first file
-TPM_counts <- fread(TPM_counts) # counts
-TPM <- as.data.frame(TPM_counts) # Copy original data
-rownames(TPM) <- TPM$Geneid  # Genes as index)
-TPM <- TPM[,-1]  # Remove Geneid column
+# Read, clean, and combine all TPM files
+for(i in TPM_files){
+  TPM <- fread(i) # read txt count
+  TPMclean <- TPM_clean(TPM) # clean TPM
+  all_TPM <- rbind(all_TPM, TPMclean) # combine
+}
 
-# Match library names with actual sample id (if needed)
-# match_index <- match(names(TPM), Key$libraryName)
-
-match_index <- match(names(TPM), Key$sampleName)
-colnames(TPM) <- Key$sampleName[match_index]
-
-## Subset ----
-# Keep WTP1 to WTP7 for seven specific genotypes
-cols_to_keep <- grep("WTP", colnames(TPM)) # Select only WTP
-TPM <- TPM[, cols_to_keep] # Subset
-cols_to_keep <- grepl("L58|WO83|A03|VT123|Pcglu|O302V|R500", names(TPM)) # Keep 7 genoypes
-TPM <- TPM[, cols_to_keep] # Subset
-cols_to_remove <- grepl("WTP8|_T1", names(TPM)) # Remove WTP8 and _T1 
-TPM <- TPM[, !cols_to_remove] # subset
-
-## Design ----
-# Get info from sample ID
-IDs <- data.frame(names(TPM))
-names(IDs) <- "ID"
-split_ID <- separate(IDs, col = ID, 
-                       into = c("Genotype", "WTP", "Rep"), sep = "_")
-IDs <- cbind(IDs, split_ID)
-
-## Missing samples ----
-genotypes <- sort(unique(IDs$Genotype)) # Unique genotypes
-time_points <- sort(unique(IDs$WTP)) # Unique time points
-reps <- sort(unique(IDs$Rep)) # Unique reps
-n_genotypes <- length(genotypes) # total genotypes
-n_reps <- length(reps) # total time points
-n_tp <- length(time_points) # total reps
-genotypes <- unlist(c(lapply(genotypes, rep, times = n_reps*n_tp))) # all genotypes
-time_points <- unlist(c(lapply(time_points, rep, times = n_reps))) # tps by reps
-time_points <- rep(time_points, n_genotypes) # all time points
-reps <- rep(reps, n_tp*n_genotypes) # all reps
-# Get all combinations in order
-all_samples <- unlist(Map(paste, genotypes, time_points, reps, sep = "_"))
-all_samples <- unname(all_samples)
-# identify missing samples
-missing_samples <- setdiff(all_samples, names(TPM)) #Difference
-# Create a new data frame with NAs for missing samples
-NA_df <- data.frame(matrix(NA, nrow = nrow(TPM), ncol = length(missing_samples)))
-colnames(NA_df) <- missing_samples # Add colnames
+# write the combined TPM file
+write.csv(all_TPM, "../input/TPM_counts/All_Genotypes_TPM.csv",row.names = F)
 
 
-
-
-# *****************************************************
-# Complete samples ----
-# *****************************************************
-# Combine original and Na dfs
-complete_samples <- cbind(TPM, NA_df)
-complete_samples <- complete_samples[all_samples] # order the columns
 
 
 
@@ -109,27 +117,29 @@ complete_samples <- complete_samples[all_samples] # order the columns
 # MetaCycle ----
 # *****************************************************
 # Source: https://cran.r-project.org/web/packages/MetaCycle/MetaCycle.pdf
-# Analysis need to be done per genotype
+# Analysis needs to be done per genotype
 
-## All Genotypes ----
+# Get the combined TPM file (if necessary)
+all_TPM <- fread("../input/TPM_counts/All_Genotypes_TPM.csv") # read csv count
 
-### Prep ----
+genotypes <- sort(unique(all_TPM$Genotype)) # Unique
 # Timepoints
 time_points <- c(17,21,25,29,33,37,41)
 time_points <- unlist(c(lapply(time_points, rep, times = n_reps))) # tps by reps
-# Genotype
-genotypes <- sort(unique(IDs$Genotype)) # Unique
 
-
-### Analysis ----
 # Approx 8.5min per genotype (Joan's Mac)
 for (g in 1:length(genotypes)) {
   # Copy dataframe
-  df <- complete_samples
-  geno_to_keep <- grep(genotypes[g], colnames(df)) # Select specific genotype
-  df <- df[, geno_to_keep] # Subset
-  df$GeneID <- rownames(df) # Add rownames as gene Id
-  df <- df[,c(length(df),1:length(df)-1)] # bring ID to front
+#   df <- complete_samples
+  df <- all_TPM[which(all_TPM$Genotype == genotypes[g]),]
+#   geno_to_keep <- grep(genotypes[g], colnames(df)) # Select specific genotype
+#   df <- df[, geno_to_keep] # Subset
+#   df$GeneID <- rownames(df) # Add rownames as gene Id
+#   df$Geneid <- rownames(df) # Add rownames as gene Id
+
+#   df <- df[,c(length(df),1:length(df)-1)] # bring ID to front
+  # Remove Genotype column
+  df$Genotype <- NULL
   
   # write file into a 'txt' file for this genotype
   df_filename <- sprintf("%s", genotypes[g])
@@ -144,7 +154,7 @@ for (g in 1:length(genotypes)) {
   write.table(df, file=df_filename,
               sep="\t", quote=FALSE, row.names=FALSE)
   
-  # analyze data with JTK_CYCLE and Lomb-Scargle
+  # analyze data with JTK_CYCLE
   start_time <- Sys.time() # start time
 
   meta2d(infile=df_filename, filestyle="txt", 
@@ -190,6 +200,14 @@ MatchGeneName$Genotype <- substr(MatchGeneName$Genotype,
                                  nchar(MatchGeneName$Genotype))
 # Avoid using the function below in case other genotypes contain "Br"
 # MatchGeneName$Gene <- gsub('Br','',MatchGeneName$Genotype)
+# table(MatchGeneName$Genotype)
+
+# Rename WO83, O302V, and Pcglu to match
+MatchGeneName$Genotype <- ifelse(MatchGeneName$Genotype=="WO_83", "WO83", 
+                                 ifelse(MatchGeneName$Genotype=="O_302V", "O302V", 
+                                        ifelse(MatchGeneName$Genotype=="PCGlu", "Pcglu",
+                                               MatchGeneName$Genotype)))
+
 
 
 # List files from Metacycle (MC)
@@ -208,14 +226,14 @@ for (f in MC_files) {
   GenotypeName <- strsplit(file_path, "/")[[1]]
   GenotypeName <- GenotypeName[length(GenotypeName)-1]
   # Rename WO83, O302V, and Pcglu to match
-  GenotypeName <- ifelse(GenotypeName=="WO83","WO_83", 
-                         ifelse(GenotypeName=="O302V","O_302V", 
-                                ifelse(GenotypeName=="Pcglu","PCGlu",
-                                       GenotypeName)))
+#   GenotypeName <- ifelse(GenotypeName=="WO83","WO_83", 
+#                          ifelse(GenotypeName=="O302V","O_302V", 
+#                                 ifelse(GenotypeName=="Pcglu","PCGlu",
+#                                        GenotypeName)))
   
   # Read and filter file
   GenotypeFile <- read.delim(file_path) # counts
-  GenotypeFile$CycID <- gsub(pattern = ".v2.1", "", GenotypeFile$CycID)
+#   GenotypeFile$CycID <- gsub(pattern = ".v2.1", "", GenotypeFile$CycID)
   # Filter rows with JTK_adjphase 20-23
   GenotypeFile <- GenotypeFile[which(GenotypeFile$JTK_adjphase >= 20),]
   GenotypeFile <- GenotypeFile[which(GenotypeFile$JTK_adjphase <= 23),]
@@ -233,30 +251,30 @@ for (f in MC_files) {
   }
   
   GenotypeFile <- rbind(Circadian, NonCircadian) # combine
+  AllGenotypes[[GenotypeName]] <- GenotypeFile  # append
   
-  # We don't need to match R500 since it already has the proper gene names
-  if (GenotypeName!="R500") {
-    MGN_subset <- MatchGeneName[which(
-      MatchGeneName$Genotype ==GenotypeName ), ]
-    MGN_subset <- MGN_subset[,c("CycID","NewCycID")]
-    # Match gene names
-    GenotypeFile <- merge(GenotypeFile,MGN_subset)
-    AllGenotypes[[GenotypeName]] <- GenotypeFile  # append
+#   # We don't need to match R500 since it already has the proper gene names
+#   if (GenotypeName!="R500") {
+#     MGN_subset <- MatchGeneName[which(
+#       MatchGeneName$Genotype ==GenotypeName ), ]
+#     MGN_subset <- MGN_subset[,c("CycID","NewCycID")]
+#     # Match gene names
+#     GenotypeFile <- merge(GenotypeFile,MGN_subset)
+#     AllGenotypes[[GenotypeName]] <- GenotypeFile  # append
     
-    # Only for R500
-    } else{ 
-      # Add NewCycID column to match the other dfs
-      GenotypeFile$NewCycID <- GenotypeFile$CycID 
-      AllGenotypes[[GenotypeName]] <- GenotypeFile # append
-      
-    }
+#     # Only for R500
+#     } else{ 
+#       # Add NewCycID column to match the other dfs
+#       GenotypeFile$NewCycID <- GenotypeFile$CycID 
+#       AllGenotypes[[GenotypeName]] <- GenotypeFile # append
+#     }
     
 }
 
 
 # Current path
 Combined_dfs <- bind_rows(AllGenotypes, .id = "Genotype")
-table(Combined_dfs$Label)
+# table(Combined_dfs$Label)
 
 # ************************************
 #     WE HAVE DUPLICATES IN A03 
@@ -266,9 +284,10 @@ table(Combined_dfs$Label)
 
 
 # Remove duplicated??????  and save file
-CircadianGenes <- Combined_dfs[!duplicated(Combined_dfs$NewCycID), ]
+# CircadianGenes <- Combined_dfs[!duplicated(Combined_dfs$NewCycID), ]
+CircadianGenes <- Combined_dfs[!duplicated(Combined_dfs$CycID), ]
 write.csv(CircadianGenes, "../output/MetaCycle/circadianANDnoncirc.csv",row.names = F)
-
+# table(CircadianGenes$Label)
 
 
 
@@ -276,26 +295,37 @@ write.csv(CircadianGenes, "../output/MetaCycle/circadianANDnoncirc.csv",row.name
 
 
 # Replace names to match
-names(complete_samples) <- gsub("WO83", "WO_83", names(complete_samples))
-names(complete_samples) <- gsub("O302V", "O_302V", names(complete_samples))
-names(complete_samples) <- gsub("Pcglu", "PCGlu", names(complete_samples))
+# names(complete_samples) <- gsub("WO83", "WO_83", names(complete_samples))
+# names(complete_samples) <- gsub("O302V", "O_302V", names(complete_samples))
+# names(complete_samples) <- gsub("Pcglu", "PCGlu", names(complete_samples))
 
 
-# Plot a circadian gene
+
+
+
+
+# *****************************************************
+# Plot a circadian gene ----
+# *****************************************************
+
+# Define a function to plot a circadian gene
 plot_circadian_gene <- function(Genotype, Top){
   CircGene <- CircadianGenes[which(CircadianGenes$Genotype == Genotype),]
   CircGene <- CircGene[order(CircGene$JTK_BH.Q),]
   CircGene <- CircGene[Top,]
 
   Candidate <- CircGene$CycID
-  Candidate <- grep(Candidate, rownames(complete_samples))
+  Candidate <- grep(Candidate, all_TPM$Geneid)
 
+  df <- all_TPM[,grepl(Genotype, names(all_TPM))]
   df <- complete_samples[,grepl(Genotype, names(complete_samples))]
-  df <- df[Candidate,]
-  gene_name <- rownames(df)[1]
+
+  df <- all_TPM[Candidate,]
+  df <- df[!duplicated(df$Geneid), ]
+  gene_name <- df$Geneid[1]
 
   df <- df %>%
-    gather(key, value, starts_with(paste0(Genotype,"_WTP"))) %>%
+    gather(key, value, starts_with("WTP")) %>%
     separate(key, into = c("Sample", "Rep"), sep = "_R")
 
   # Line plot
@@ -307,11 +337,11 @@ plot_circadian_gene <- function(Genotype, Top){
     ggtitle(sprintf("Top %s gene: %s", Top, gene_name))
 }
 
-# Plot top gene in a genotype
-unique(CircadianGenes$Genotype)
-Genotype <- "L58"
-Top <- 1
-plot_circadian_gene(Genotype, Top)
+# Execute function
+unique(CircadianGenes$Genotype) # List genotypes
+Genotype <- "R500" # Select genotype
+Top <- 10 # Select rank (only one gene)
+plot_circadian_gene(Genotype, Top) # Plot
 
 
 

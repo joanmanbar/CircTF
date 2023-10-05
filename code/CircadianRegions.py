@@ -14,7 +14,9 @@ bed_files = glob.glob('../output/Regions/*.2kb.promoters.bed', recursive=False)
 # CReate empty dataframe
 All_regions = pd.DataFrame()
 # List the seven genotypes
-genotypes = ['L58','R500','WO_83','PCGlu','VT123','A03','O_302V']
+# genotypes = ['L58','R500','WO_83','PCGlu','VT123','A03','O_302V']
+genotypes = ['L58','R500','WO83','Pcglu','VT123','A03','O302V']
+
 
 for g in genotypes:
     
@@ -53,11 +55,11 @@ for g in genotypes:
 # Circadian genes
 
 # Read output form MetaCycle
-CircadianGenes = '../output/MetaCycle/CircadianGenes.csv'
+CircadianGenes = '../output/MetaCycle/circadianANDnoncirc.csv'
 CircadianGenes = pd.read_csv(CircadianGenes)
 # Get gene name to match with promoter
 CircadianGenes = CircadianGenes.rename(columns={'NewCycID': 'gene'})
 # Merge files
 CircRegions_2kb = pd.merge(CircadianGenes,All_regions, on='gene')
 # Write as csv (probably not the ideal format)
-CircRegions_2kb.to_csv('../output/CircadianRegions_2kb.csv')
+CircRegions_2kb.to_csv('../output/circANDnoncirc_Regions_2kb.csv')
