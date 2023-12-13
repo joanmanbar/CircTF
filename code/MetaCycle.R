@@ -102,7 +102,7 @@ TPM_files <- list.files(path = '../input/TPM_counts',
 for(i in TPM_files){
   TPM <- fread(i) # read txt count
   TPMclean <- TPM_clean(TPM) # clean TPM
-  all_TPM <- rbind(all_TPM, TPMclean) # combine
+  all_TPM <- rbind(all_TPM, TPMclean, fill=TRUE) # combine
 }
 
 # write the combined TPM file
@@ -294,13 +294,6 @@ write.csv(CircadianGenes, "../output/MetaCycle/circadianANDnoncirc.csv",row.name
 
 
 
-# Replace names to match
-# names(complete_samples) <- gsub("WO83", "WO_83", names(complete_samples))
-# names(complete_samples) <- gsub("O302V", "O_302V", names(complete_samples))
-# names(complete_samples) <- gsub("Pcglu", "PCGlu", names(complete_samples))
-
-
-
 
 
 
@@ -336,6 +329,14 @@ plot_circadian_gene <- function(Genotype, Top){
     labs(x = "Timepoint", y = "TPM") +
     ggtitle(sprintf("Top %s gene: %s", Top, gene_name))
 }
+
+
+
+# Get the combined TPM file (if necessary)
+all_TPM <- fread("../input/TPM_counts/All_Genotypes_TPM.csv") # read csv count
+complete_samples <- all_TPM
+# Get the count file (if necessary) 
+CircadianGenes <- read.csv("../output/MetaCycle/circadianANDnoncirc.csv") # read csv count
 
 # Execute function
 unique(CircadianGenes$Genotype) # List genotypes

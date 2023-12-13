@@ -122,7 +122,6 @@ This file describes the scripts used as of summer of 2023. The scripts were init
 
 
 
-
 **NOTE: Correct genotype names for:** \
 - WO38: capital W, capital O, three, eight \
 - O302V: capital O, three, zero, 2, capital V \
