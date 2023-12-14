@@ -26,3 +26,4 @@ code/RandomForest.py
 code/RandomForest.sbatch 
 code/filter_dense_PCA.py
 code/filter_dense_cossim.py
+code/git_push.sh
